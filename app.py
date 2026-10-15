@@ -1,7 +1,5 @@
 """Minimal Streamlit UI: upload a cell image → Yes / No cancer."""
 
-from pathlib import Path
-
 import streamlit as st
 from PIL import Image
 
@@ -53,8 +51,8 @@ st.markdown(
 
 
 @st.cache_resource
-def get_model(_mtime: float):
-    # _mtime busts cache when the .keras file is retrained/replaced
+def get_model():
+    """Optional CNN; returns None on Streamlit Cloud (no TensorFlow)."""
     return load_cancer_model()
 
 
@@ -65,25 +63,15 @@ uploaded = st.file_uploader(
 )
 
 if uploaded is None:
-    st.caption("Supported: PNG, JPG, TIFF, BMP, WEBP")
-    if not MODEL_PATH.exists():
-        st.warning(
-            "Model file missing. Create one with:\n\n"
-            "`python3.11 train_bootstrap.py`"
-        )
+    st.caption("Supported: PNG, JPG, TIFF, BMP, WEBP · try files in demo_images/")
 else:
     image = Image.open(uploaded)
     st.image(image, width="stretch", caption="Uploaded image")
 
-    try:
-        mtime = MODEL_PATH.stat().st_mtime if MODEL_PATH.exists() else 0.0
-        model = get_model(mtime)
-    except FileNotFoundError as exc:
-        st.error(str(exc))
-        st.stop()
+    model = get_model()
 
     with st.spinner("Analyzing…"):
-        result = predict_cancer(model, image)
+        result = predict_cancer(image, model=model)
 
     if result["has_cancer"]:
         st.markdown(
